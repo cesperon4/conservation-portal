@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  customer
+  admin
+  guest
+  county
+  contractor
+}
+
+model User {
+  id        String    @id                 @default(cuid())
+  firstName String    @map("first_name")  @db.VarChar(50)
+  lastName  String    @map("last_name")   @db.VarChar(50)
+  email        String    @unique             @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  phone        String?   @db.VarChar(20)
+  role         Role      @default(customer)
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now())     @map("created_at")
+  updatedAt DateTime  @updatedAt          @map("updated_at")
+  // programs Program[]
+  // programBudgetLog ProgramBudgetLog[]
+  // waterSavingsLog WaterSavingsLog[]
+  // staffAssignments  StatusLog[]   @relation("StaffAssignment")
+  // statusLog StatusLog[]
+  // reviewNote ReviewNote[]
+  // communicationHistoryLog CommunicationHistoryLog[]
+
+  @@index([deletedAt])
+  @@index([createdAt])
+  @@map("users")
+}
+
+

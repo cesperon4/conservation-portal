@@ -1,0 +1,164 @@
+import { z } from "zod";
+import { Prisma } from "../../generated/prisma/client.js";
+import { decimalInput } from "../../lib/decimal.js";
+
+export const programIdParamsSchema = z.object({
+  id: z.string().cuid(),
+});
+
+export const programQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  view: z.enum(["full", "name"]).default("full"),
+  status: z.enum(["active", "deleted", "all"]).default("active"),
+  column: z.enum(["createdAt", "name"]).default("createdAt"),
+  direction: z.enum(["asc", "desc"]).default("desc"),
+  cursor: z.string().cuid().optional(),
+});
+
+export type ListProgramsQuery = z.infer<typeof programQuerySchema>;
+
+export const createProgramBodySchema = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  defaultUnitWaterSavings: decimalInput(10, 2),
+  defaultUnitCost: decimalInput(12, 2),
+  budget: decimalInput(12, 2),
+  defaultUnit: z.string().min(1),
+  singleFamilyHome: z.boolean().default(false),
+  multiFamilyComplex: z.boolean().default(false),
+  residential: z.boolean().default(false),
+  commercial: z.boolean().default(false),
+  programStart: z.coerce.date(),
+  programEnd: z.coerce.date(),
+  userId: z.string().cuid(),
+  grantFunding: z.number().finite(),
+  thirdParty: z.boolean().default(false),
+});
+
+export const updateProgramBodySchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  description: z.string().nullable().optional(),
+  defaultUnitWaterSavings: decimalInput(10, 2).optional(),
+  defaultUnitCost: decimalInput(12, 2).optional(),
+  budget: decimalInput(12, 2).optional(),
+  defaultUnit: z.string().min(1).optional(),
+  singleFamilyHome: z.boolean().optional(),
+  multiFamilyComplex: z.boolean().optional(),
+  residential: z.boolean().optional(),
+  commercial: z.boolean().optional(),
+  programStart: z.coerce.date().optional(),
+  programEnd: z.coerce.date().optional(),
+  userId: z.string().cuid().optional(),
+  grantFunding: z.number().finite().optional(),
+  thirdParty: z.boolean().optional(),
+});
+
+export const programResponseSchema = z.object({
+  id: z.string().cuid(),
+  name: z.string(),
+  description: z.string().nullable(),
+  defaultUnitWaterSavings: z.string(),
+  defaultUnitCost: z.string(),
+  budget: z.string(),
+  defaultUnit: z.string(),
+  singleFamilyHome: z.boolean(),
+  multiFamilyComplex: z.boolean(),
+  residential: z.boolean(),
+  commercial: z.boolean(),
+  programStart: z.coerce.date(),
+  programEnd: z.coerce.date(),
+  userId: z.string().cuid(),
+  grantFunding: z.number().finite(),
+  thirdParty: z.boolean(),
+  deletedAt: z.coerce.date().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export const programNameSchema = programResponseSchema.pick({
+  id: true,
+  name: true,
+});
+
+export const programPaginationSchema = z.object({
+  limit: z.number().int(),
+  nextCursor: z.string().cuid().nullable(),
+  hasMore: z.boolean(),
+});
+
+const programListSchemas = {
+  name: programNameSchema,
+  full: programResponseSchema,
+} as const;
+
+type ProgramView = keyof typeof programListSchemas;
+
+function createProgramListResponseSchema<V extends ProgramView>(
+  view: V,
+  itemSchema: (typeof programListSchemas)[V],
+) {
+  return z.object({
+    view: z.literal(view),
+    data: z.array(itemSchema),
+    pagination: programPaginationSchema,
+  });
+}
+
+export const programListNamesResponseSchema = createProgramListResponseSchema(
+  "name",
+  programNameSchema,
+);
+export const programListFullResponseSchema = createProgramListResponseSchema(
+  "full",
+  programResponseSchema,
+);
+
+export const programsListResponseSchema = z.discriminatedUnion("view", [
+  programListFullResponseSchema,
+  programListNamesResponseSchema,
+]);
+
+export const nameSelect = {
+  id: true,
+  name: true,
+} satisfies Prisma.ProgramSelect;
+
+export const publicProgramSelect = {
+  id: true,
+  name: true,
+  description: true,
+  defaultUnitWaterSavings: true,
+  defaultUnitCost: true,
+  budget: true,
+  defaultUnit: true,
+  singleFamilyHome: true,
+  multiFamilyComplex: true,
+  residential: true,
+  commercial: true,
+  programStart: true,
+  programEnd: true,
+  userId: true,
+  grantFunding: true,
+  thirdParty: true,
+  deletedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.ProgramSelect;
+
+export const programSelectByView = {
+  full: publicProgramSelect,
+  name: nameSelect,
+} satisfies Record<ListProgramsQuery["view"], Prisma.ProgramSelect>;
+
+export type CreateProgramBody = z.infer<typeof createProgramBodySchema>;
+export type UpdateProgramBody = z.infer<typeof updateProgramBodySchema>;
+export type ProgramResponse = z.infer<typeof programResponseSchema>;
+export type ProgramNameResponse = z.infer<typeof programNameSchema>;
+
+export type ProgramPublicRow = Prisma.ProgramGetPayload<{
+  select: typeof publicProgramSelect;
+}>;
+
+export type ProgramNameRow = Prisma.ProgramGetPayload<{
+  select: typeof nameSelect;
+}>;

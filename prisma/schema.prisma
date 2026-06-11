@@ -16,17 +16,17 @@ enum Role {
 }
 
 model User {
-  id        String    @id                 @default(cuid())
-  firstName String    @map("first_name")  @db.VarChar(50)
-  lastName  String    @map("last_name")   @db.VarChar(50)
-  email        String    @unique             @db.VarChar(255)
-  passwordHash String    @map("password_hash") @db.VarChar(255)
+  id           String    @id                    @default(cuid())
+  firstName    String    @map("first_name")     @db.VarChar(50)
+  lastName     String    @map("last_name")      @db.VarChar(50)
+  email        String    @unique                @db.VarChar(255)
+  passwordHash String    @map("password_hash")  @db.VarChar(255)
   phone        String?   @db.VarChar(20)
   role         Role      @default(customer)
-  deletedAt DateTime? @map("deleted_at")
-  createdAt DateTime  @default(now())     @map("created_at")
-  updatedAt DateTime  @updatedAt          @map("updated_at")
-  // programs Program[]
+  deletedAt    DateTime? @map("deleted_at")
+  createdAt    DateTime  @default(now())        @map("created_at")
+  updatedAt    DateTime  @updatedAt             @map("updated_at")
+  programs Program[]
   // programBudgetLog ProgramBudgetLog[]
   // waterSavingsLog WaterSavingsLog[]
   // staffAssignments  StatusLog[]   @relation("StaffAssignment")
@@ -37,6 +37,33 @@ model User {
   @@index([deletedAt])
   @@index([createdAt])
   @@map("users")
+}
+
+model Program {
+  id                      String    @id @default(cuid())
+  name                    String    @db.VarChar(255)
+  description             String?
+  defaultUnitWaterSavings Decimal   @db.Decimal(10,2) @map("default_unit_water_savings")
+  defaultUnitCost         Decimal   @db.Decimal(12,2) @map("default_unit_cost") 
+  budget                  Decimal   @db.Decimal(12,2)  
+  defaultUnit             String    @map("default_unit")
+  singleFamilyHome        Boolean   @map("single_family_home")   @default(false) 
+  multiFamilyComplex      Boolean   @map("multi_family_complex") @default(false)
+  residential             Boolean   @default(false)
+  commercial              Boolean   @default(false)
+  programStart            DateTime  @map("program_start")
+  programEnd              DateTime  @map("program_end")
+  userId                  String    @map("user_id")
+  user                    User      @relation(fields:[userId], references:[id], onDelete: Restrict)
+  grantFunding            Float     @map("grant_funding")
+  thirdParty              Boolean   @map("third_party") @default(false)
+  createdAt               DateTime  @default(now())     @map("created_at")
+  updatedAt               DateTime  @updatedAt          @map("updated_at")
+  deletedAt               DateTime? @map("deleted_at")
+
+  @@index([createdAt])
+  @@index([userId])
+  @@map("programs")
 }
 
 

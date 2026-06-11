@@ -52,7 +52,7 @@ export const updateUserBodySchema = z.object({
 });
 
 export const userResponseSchema = z.object({
-  id: z.string(),
+  id: z.string().cuid(),
   firstName: z.string(),
   lastName: z.string(),
   email: z.string().email(),

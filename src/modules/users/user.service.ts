@@ -1,8 +1,7 @@
 import { hashPassword } from "../../lib/password.js";
-import { NotFoundError } from "../../lib/errors.js";
-import type { CreateUserBody, UpdateUserBody } from "./user.schema.js";
+import { HttpError, NotFoundError } from "../../lib/errors.js";
+import type { CreateUserBody, ListUsersQuery, UpdateUserBody } from "./user.schema.js";
 import { UserRepository } from "./user.repository.js";
-import { ListUsersQuery } from "./user.schema.js";
 
 export class UserService {
   constructor(private readonly users: UserRepository) {}
@@ -32,28 +31,40 @@ export class UserService {
     return user;
   }
 
+  async requireAdminProfile(userId: string) {
+    const profile = await this.users.findAdminProfile(userId);
+    if (!profile) {
+      throw new HttpError("Program owner must be an admin with a profile", 400);
+    }
+    return profile;
+  }
+
   async create(input: CreateUserBody) {
     const passwordHash = await hashPassword(input.password);
+    const role = input.role ?? "customer";
 
-    return this.users.create({
+    const user = await this.users.create({
       firstName: input.firstName,
       lastName: input.lastName,
       email: input.email,
       passwordHash,
       phone: input.phone,
-      role: input.role,
+      role,
     });
+
+    await this.users.syncRoleProfile(user.id, role, input.customerProfile);
+    return this.getById(user.id);
   }
 
   async update(id: string, input: UpdateUserBody) {
-    await this.getById(id);
+    const existing = await this.getById(id);
 
     const passwordHash =
       input.password !== undefined
         ? await hashPassword(input.password)
         : undefined;
 
-    return this.users.update(id, {
+    await this.users.update(id, {
       ...(input.firstName !== undefined && { firstName: input.firstName }),
       ...(input.lastName !== undefined && { lastName: input.lastName }),
       ...(input.email !== undefined && { email: input.email }),
@@ -61,6 +72,13 @@ export class UserService {
       ...(input.role !== undefined && { role: input.role }),
       ...(passwordHash !== undefined && { passwordHash }),
     });
+
+    const role = input.role ?? existing.role;
+    if (input.role !== undefined || input.customerProfile !== undefined) {
+      await this.users.syncRoleProfile(id, role, input.customerProfile);
+    }
+
+    return this.getById(id);
   }
 
   async softDelete(id: string) {

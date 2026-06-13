@@ -49,7 +49,7 @@ export class ProgramRepository {
 
       await tx.programBudgetLog.create({
         data: {
-          user: { connect: { id: created.userId } },
+          admin: { connect: { userId: created.adminUserId } },
           program: { connect: { id: created.id } },
           newBudget: created.budget,
         },
@@ -81,7 +81,7 @@ export class ProgramRepository {
 
       await tx.programBudgetLog.create({
         data: {
-          user: { connect: { id: budgetLogData.userId } },
+          admin: { connect: { userId: budgetLogData.adminUserId } },
           program: { connect: { id: updated.id } },
           newBudget: budgetLogData.newBudget,
           previousBudget: budgetLogData.previousBudget,

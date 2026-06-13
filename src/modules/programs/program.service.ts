@@ -56,6 +56,7 @@ export class ProgramService {
   }
 
   async create(input: CreateProgramBody) {
+    await this.users.requireAdminProfile(input.userId);
     return this.programs.create({
       name: input.name,
       description: input.description,
@@ -69,14 +70,14 @@ export class ProgramService {
       commercial: input.commercial,
       programStart: input.programStart,
       programEnd: input.programEnd,
-      user: { connect: { id: input.userId } },
+      admin: { connect: { userId: input.userId } },
       grantFunding: input.grantFunding,
       thirdParty: input.thirdParty,
     });
   }
 
   async update(id: string, input: UpdateProgramBody) {
-    await this.users.getById(input.userId);
+    await this.users.requireAdminProfile(input.userId);
     const program = await this.getById(id);
     const data = {
       ...(input.name !== undefined && { name: input.name }),
@@ -120,7 +121,7 @@ export class ProgramService {
       id,
       { ...data, budget: input.budget },
       {
-        userId: input.userId,
+        adminUserId: input.userId,
         previousBudget: program.budget,
         newBudget: input.budget,
       },
@@ -162,13 +163,13 @@ export class ProgramService {
 
   async createBudgetLog(id: string, input: CreateProgramBudgetLogBody) {
     const program = await this.getById(id);
-    await this.users.getById(input.userId);
+    await this.users.requireAdminProfile(input.userId);
     return this.programs.createBudgetLog({
       previousBudget: program.budget,
       ...(input.comment !== undefined && { comment: input.comment }),
       newBudget: input.newBudget,
       program: { connect: { id } },
-      user: { connect: { id: input.userId } }, //derive userId from authToken not request body
+      admin: { connect: { userId: input.userId } },
     });
   }
 

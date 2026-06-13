@@ -23,8 +23,8 @@ export function mapProgramToResponse(row: ProgramPublicRow): ProgramResponse {
     commercial: row.commercial,
     programStart: row.programStart,
     programEnd: row.programEnd,
-    userId: row.userId,
-    grantFunding: row.grantFunding,
+    userId: row.adminUserId,
+    grantFunding: row.grantFunding.toNumber(),
     thirdParty: row.thirdParty,
     deletedAt: row.deletedAt,
     createdAt: row.createdAt,
@@ -46,7 +46,7 @@ export function mapProgramBudgetLogToResponse(
     updatedAt: row.updatedAt,
     deletedAt: row.deletedAt,
     programId: row.programId,
-    userId: row.userId,
+    userId: row.adminUserId,
     comment: row.comment,
   };
 }

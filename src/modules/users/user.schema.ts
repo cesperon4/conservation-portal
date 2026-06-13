@@ -26,6 +26,7 @@ export const userQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   view: z.enum(["full", "email", "name"]).default("full"),
   status: z.enum(["active", "deleted", "all"]).default("active"),
+  role: userRoleSchema.optional(),
   column: userSortBySchema.default("createdAt"),
   direction: z.enum(["asc", "desc"]).default("desc"),
   cursor: z.string().cuid().optional(),
@@ -33,14 +34,54 @@ export const userQuerySchema = z.object({
 
 export type ListUsersQuery = z.infer<typeof userQuerySchema>;
 
-export const createUserBodySchema = z.object({
-  firstName: z.string().min(1).max(50),
-  lastName: z.string().min(1).max(50),
-  email: z.string().trim().toLowerCase().email().max(255),
-  password: z.string().min(8).max(128),
-  phone: z.string().min(1).max(20).optional(),
-  role: userRoleSchema.default("customer"),
+export const customerProfileBodySchema = z.object({
+  mailingAddress: z.string().min(1).max(255),
+  mailingCity: z.string().min(1).max(50),
+  mailingState: z.string().min(1).max(50),
+  mailingZip: z.string().min(1).max(50),
+  company: z.string().max(255).optional(),
+  title: z.string().max(50).optional(),
 });
+
+export const customerProfileResponseSchema = customerProfileBodySchema
+  .extend({
+    userId: z.string().cuid(),
+    verifiedAt: z.coerce.date().nullable(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+    deletedAt: z.coerce.date().nullable(),
+  })
+  .extend({
+    company: z.string().max(255).nullable(),
+    title: z.string().max(50).nullable(),
+  });
+
+export const adminProfileResponseSchema = z.object({
+  userId: z.string().cuid(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  deletedAt: z.coerce.date().nullable(),
+});
+
+export const createUserBodySchema = z
+  .object({
+    firstName: z.string().min(1).max(50),
+    lastName: z.string().min(1).max(50),
+    email: z.string().trim().toLowerCase().email().max(255),
+    password: z.string().min(8).max(128),
+    phone: z.string().min(1).max(20).optional(),
+    role: userRoleSchema.default("customer"),
+    customerProfile: customerProfileBodySchema.optional(),
+  })
+  .superRefine((body, ctx) => {
+    if (body.role === "customer" && !body.customerProfile) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "customerProfile is required when role is customer",
+        path: ["customerProfile"],
+      });
+    }
+  });
 
 export const updateUserBodySchema = z.object({
   firstName: z.string().min(1).max(50).optional(),
@@ -49,6 +90,7 @@ export const updateUserBodySchema = z.object({
   password: z.string().min(8).max(128).optional(),
   phone: z.string().min(1).max(20).nullable().optional(),
   role: userRoleSchema.optional(),
+  customerProfile: customerProfileBodySchema.partial().optional(),
 });
 
 export const userResponseSchema = z.object({
@@ -61,6 +103,8 @@ export const userResponseSchema = z.object({
   deletedAt: z.coerce.date().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
+  adminProfile: adminProfileResponseSchema.nullable().optional(),
+  customerProfile: customerProfileResponseSchema.nullable().optional(),
 });
 
 export const userNameSchema = userResponseSchema.pick({
@@ -141,6 +185,20 @@ export const publicUserSelect = {
   updatedAt: true,
 } satisfies Prisma.UserSelect;
 
+export const publicUserWithProfilesSelect = {
+  ...publicUserSelect,
+  adminProfile: true,
+  customerProfile: true,
+} satisfies Prisma.UserSelect;
+
+export type UserPublicRow = Prisma.UserGetPayload<{
+  select: typeof publicUserSelect;
+}>;
+
+export type UserWithProfilesRow = Prisma.UserGetPayload<{
+  select: typeof publicUserWithProfilesSelect;
+}>;
+
 export const userSelectByView = {
   full: publicUserSelect,
   name: nameSelect,
@@ -149,3 +207,4 @@ export const userSelectByView = {
 
 export type CreateUserBody = z.infer<typeof createUserBodySchema>;
 export type UpdateUserBody = z.infer<typeof updateUserBodySchema>;
+export type CustomerProfileBody = z.infer<typeof customerProfileBodySchema>;

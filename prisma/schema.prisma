@@ -26,8 +26,10 @@ model User {
   deletedAt    DateTime? @map("deleted_at")
   createdAt    DateTime  @default(now())        @map("created_at")
   updatedAt    DateTime  @updatedAt             @map("updated_at")
-  programs Program[]
-  programBudgetLog ProgramBudgetLog[]
+  adminProfile  AdminProfile?
+  customerProfile CustomerProfile?
+  // programs Program[]
+  // programBudgetLog ProgramBudgetLog[]
   // waterSavingsLog WaterSavingsLog[]
   // staffAssignments  StatusLog[]   @relation("StaffAssignment")
   // statusLog StatusLog[]
@@ -37,6 +39,39 @@ model User {
   @@index([deletedAt])
   @@index([createdAt])
   @@map("users")
+}
+
+model AdminProfile {
+  userId String @id @map("user_id")
+  user User @relation(fields:[userId],  references:[id], onDelete: Restrict)
+  programs Program[]
+  programBudgetLog ProgramBudgetLog[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt  @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@map("admin_profiles")
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model CustomerProfile {
+  userId String @id @map("user_id")
+  user User @relation(fields:[userId], references:[id], onDelete: Restrict)
+  mailingAddress String @map("mailing_address") @db.VarChar(255)
+  mailingCity  String @map("mailing_city") @db.VarChar(50)
+  mailingState String @map("mailing_state") @db.VarChar(50)
+  mailingZip String @map("mailing_zip")  @db.VarChar(50)
+  company String? @db.VarChar(255)
+  title String? @db.VarChar(50)
+  verifiedAt DateTime?  @map("verified_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt  @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@map("customer_profiles")
+  @@index([createdAt])
+  @@index([deletedAt])
 }
 
 model Program {
@@ -53,9 +88,9 @@ model Program {
   commercial              Boolean   @default(false)
   programStart            DateTime  @map("program_start")
   programEnd              DateTime  @map("program_end")
-  userId                  String    @map("user_id")
-  user                    User      @relation(fields:[userId], references:[id], onDelete: Restrict)
-  grantFunding            Float     @map("grant_funding")
+  adminUserId             String    @map("admin_user_id")
+  admin                   AdminProfile  @relation(fields: [adminUserId], references: [userId], onDelete: Restrict)
+  grantFunding            Decimal     @map("grant_funding")
   thirdParty              Boolean   @map("third_party") @default(false)
   createdAt               DateTime  @default(now())     @map("created_at")
   updatedAt               DateTime  @updatedAt          @map("updated_at")
@@ -63,7 +98,7 @@ model Program {
   budgetLogs              ProgramBudgetLog[]
 
   @@index([createdAt])
-  @@index([userId])
+  @@index([adminUserId])
   @@map("programs")
 }
 
@@ -75,13 +110,13 @@ model ProgramBudgetLog {
   updatedAt       DateTime  @updatedAt  @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
   programId       String  @map("program_id")
-  program         Program @relation(fields: [programId], references: [id])
-  userId          String  @map("user_id")
-  user            User    @relation(fields: [userId], references: [id])
-  comment         String?
+  program         Program @relation(fields: [programId], references: [id], onDelete: Restrict)
+  adminUserId     String  @map("admin_user_id")
+  admin           AdminProfile  @relation(fields: [adminUserId], references: [userId], onDelete: Restrict)
+  comment         String? @db.VarChar(2000)
 
   @@index([programId])
-  @@index([userId])
+  @@index([adminUserId])
   @@map("program_budget_logs")
 }
 

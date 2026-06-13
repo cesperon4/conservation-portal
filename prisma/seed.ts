@@ -7,6 +7,16 @@ import { hashPassword } from "../src/lib/password.js";
 /** Default password for all seeded users (development only). */
 export const SEED_USER_PASSWORD = "Password123!";
 
+type SeedCustomerProfile = {
+  mailingAddress: string;
+  mailingCity: string;
+  mailingState: string;
+  mailingZip: string;
+  company?: string;
+  title?: string;
+  verifiedAt?: Date;
+};
+
 type SeedUser = {
   firstName: string;
   lastName: string;
@@ -14,6 +24,7 @@ type SeedUser = {
   role?: Role;
   phone?: string;
   deletedAt?: Date;
+  customerProfile?: SeedCustomerProfile;
 };
 
 const namedUsers: SeedUser[] = [
@@ -23,6 +34,13 @@ const namedUsers: SeedUser[] = [
     email: "alice.chen@example.com",
     role: "admin",
     phone: "5105550101",
+  },
+  {
+    firstName: "Brian",
+    lastName: "Walsh",
+    email: "brian.walsh@example.com",
+    role: "admin",
+    phone: "5105550104",
   },
   {
     firstName: "Marcus",
@@ -43,6 +61,12 @@ const namedUsers: SeedUser[] = [
     lastName: "Kim",
     email: "jordan.kim@example.com",
     role: "customer",
+    customerProfile: {
+      mailingAddress: "412 Palm Ave",
+      mailingCity: "Fremont",
+      mailingState: "CA",
+      mailingZip: "94536",
+    },
   },
   {
     firstName: "Elena",
@@ -70,6 +94,13 @@ const namedUsers: SeedUser[] = [
     email: "james.whitfield@example.com",
     role: "customer",
     phone: "5105550109",
+    customerProfile: {
+      mailingAddress: "88 Mission Blvd",
+      mailingCity: "Union City",
+      mailingState: "CA",
+      mailingZip: "94587",
+      verifiedAt: new Date("2025-01-10T00:00:00.000Z"),
+    },
   },
   {
     firstName: "Mei",
@@ -77,6 +108,15 @@ const namedUsers: SeedUser[] = [
     email: "mei.tanaka@example.com",
     role: "customer",
     phone: "5105550110",
+    customerProfile: {
+      mailingAddress: "1200 Stevenson Blvd",
+      mailingCity: "Fremont",
+      mailingState: "CA",
+      mailingZip: "94538",
+      company: "Tanaka Property Group",
+      title: "Owner",
+      verifiedAt: new Date("2025-02-01T00:00:00.000Z"),
+    },
   },
   {
     firstName: "Carlos",
@@ -92,6 +132,12 @@ const namedUsers: SeedUser[] = [
     role: "customer",
     phone: "5105550105",
     deletedAt: new Date("2025-03-01T12:00:00.000Z"),
+    customerProfile: {
+      mailingAddress: "501 Decoto Rd",
+      mailingCity: "Fremont",
+      mailingState: "CA",
+      mailingZip: "94555",
+    },
   },
   {
     firstName: "Rachel",
@@ -150,17 +196,35 @@ const bulkRoles: Role[] = [
 const bulkUsers: SeedUser[] = bulkFirstNames.map((firstName, index) => {
   const lastName = bulkLastNames[index % bulkLastNames.length]!;
   const sequence = String(index + 1).padStart(2, "0");
+  const role = bulkRoles[index % bulkRoles.length]!;
 
   return {
     firstName,
     lastName,
     email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${sequence}@example.com`,
-    role: bulkRoles[index % bulkRoles.length],
+    role,
     phone: index % 3 === 0 ? undefined : `5105551${String(200 + index).slice(-3)}`,
+    ...(role === "customer" && {
+      customerProfile: defaultCustomerMailing(firstName, lastName, index),
+    }),
   };
 });
 
 const seedUsers: SeedUser[] = [...namedUsers, ...bulkUsers];
+
+function defaultCustomerMailing(
+  firstName: string,
+  lastName: string,
+  index: number,
+): SeedCustomerProfile {
+  const streetNumber = 100 + index * 17;
+  return {
+    mailingAddress: `${streetNumber} ${lastName} St`,
+    mailingCity: index % 2 === 0 ? "Fremont" : "Newark",
+    mailingState: "CA",
+    mailingZip: index % 2 === 0 ? "94536" : "94560",
+  };
+}
 
 type SeedProgram = {
   name: string;
@@ -196,7 +260,7 @@ const seedPrograms: SeedProgram[] = [
     commercial: false,
     programStart: new Date("2024-01-01T00:00:00.000Z"),
     programEnd: new Date("2026-12-31T23:59:59.000Z"),
-    ownerEmail: "marcus.rivera@example.com",
+    ownerEmail: "alice.chen@example.com",
     grantFunding: 500000,
     thirdParty: false,
   },
@@ -214,7 +278,7 @@ const seedPrograms: SeedProgram[] = [
     commercial: false,
     programStart: new Date("2024-06-01T00:00:00.000Z"),
     programEnd: new Date("2025-12-31T23:59:59.000Z"),
-    ownerEmail: "elena.vasquez@example.com",
+    ownerEmail: "brian.walsh@example.com",
     grantFunding: 150000,
     thirdParty: true,
   },
@@ -250,7 +314,7 @@ const seedPrograms: SeedProgram[] = [
     commercial: false,
     programStart: new Date("2025-01-15T00:00:00.000Z"),
     programEnd: new Date("2027-01-15T23:59:59.000Z"),
-    ownerEmail: "marcus.rivera@example.com",
+    ownerEmail: "brian.walsh@example.com",
     grantFunding: 200000,
     thirdParty: true,
   },
@@ -268,7 +332,7 @@ const seedPrograms: SeedProgram[] = [
     commercial: true,
     programStart: new Date("2024-03-01T00:00:00.000Z"),
     programEnd: new Date("2026-03-01T23:59:59.000Z"),
-    ownerEmail: "elena.vasquez@example.com",
+    ownerEmail: "alice.chen@example.com",
     grantFunding: 75000,
     thirdParty: false,
   },
@@ -286,7 +350,7 @@ const seedPrograms: SeedProgram[] = [
     commercial: false,
     programStart: new Date("2025-04-01T00:00:00.000Z"),
     programEnd: new Date("2026-04-01T23:59:59.000Z"),
-    ownerEmail: "alice.chen@example.com",
+    ownerEmail: "brian.walsh@example.com",
     grantFunding: 100000,
     thirdParty: false,
   },
@@ -304,7 +368,7 @@ const seedPrograms: SeedProgram[] = [
     commercial: true,
     programStart: new Date("2024-01-01T00:00:00.000Z"),
     programEnd: new Date("2025-06-30T23:59:59.000Z"),
-    ownerEmail: "priya.patel@example.com",
+    ownerEmail: "alice.chen@example.com",
     grantFunding: 25000,
     thirdParty: true,
   },
@@ -321,7 +385,7 @@ const seedPrograms: SeedProgram[] = [
     commercial: false,
     programStart: new Date("2020-01-01T00:00:00.000Z"),
     programEnd: new Date("2023-12-31T23:59:59.000Z"),
-    ownerEmail: "marcus.rivera@example.com",
+    ownerEmail: "brian.walsh@example.com",
     grantFunding: 100000,
     thirdParty: false,
     deletedAt: new Date("2024-01-01T12:00:00.000Z"),
@@ -334,40 +398,118 @@ const adapter = new PrismaPg({
 
 const prisma = new PrismaClient({ adapter });
 
+async function syncRoleProfile(
+  userId: string,
+  role: Role,
+  deletedAt: Date | null,
+  customerProfile?: SeedCustomerProfile,
+) {
+  if (role === "admin") {
+    await prisma.customerProfile.deleteMany({ where: { userId } });
+    await prisma.adminProfile.upsert({
+      where: { userId },
+      create: { userId, deletedAt },
+      update: { deletedAt },
+    });
+    return;
+  }
+
+  if (role === "customer") {
+    const mailing =
+      customerProfile ?? defaultCustomerMailing("Seed", "Customer", 0);
+
+    await prisma.customerProfile.upsert({
+      where: { userId },
+      create: {
+        userId,
+        mailingAddress: mailing.mailingAddress,
+        mailingCity: mailing.mailingCity,
+        mailingState: mailing.mailingState,
+        mailingZip: mailing.mailingZip,
+        company: mailing.company ?? null,
+        title: mailing.title ?? null,
+        verifiedAt: mailing.verifiedAt ?? null,
+        deletedAt,
+      },
+      update: {
+        mailingAddress: mailing.mailingAddress,
+        mailingCity: mailing.mailingCity,
+        mailingState: mailing.mailingState,
+        mailingZip: mailing.mailingZip,
+        company: mailing.company ?? null,
+        title: mailing.title ?? null,
+        verifiedAt: mailing.verifiedAt ?? null,
+        deletedAt,
+      },
+    });
+  } else {
+    await prisma.customerProfile.deleteMany({ where: { userId } });
+  }
+
+  const [ownedPrograms, ownedBudgetLogs] = await Promise.all([
+    prisma.program.count({ where: { adminUserId: userId } }),
+    prisma.programBudgetLog.count({ where: { adminUserId: userId } }),
+  ]);
+
+  if (ownedPrograms === 0 && ownedBudgetLogs === 0) {
+    await prisma.adminProfile.deleteMany({ where: { userId } });
+  }
+}
+
+async function upsertSeedUser(user: SeedUser, passwordHash: string) {
+  const { email, deletedAt, role, customerProfile, ...profile } = user;
+  const resolvedRole = role ?? "customer";
+  const normalizedEmail = email.toLowerCase();
+
+  const upserted = await prisma.user.upsert({
+    where: { email: normalizedEmail },
+    create: {
+      ...profile,
+      email: normalizedEmail,
+      passwordHash,
+      role: resolvedRole,
+      deletedAt: deletedAt ?? null,
+    },
+    update: {
+      ...profile,
+      email: normalizedEmail,
+      passwordHash,
+      role: resolvedRole,
+      deletedAt: deletedAt ?? null,
+    },
+  });
+
+  await syncRoleProfile(
+    upserted.id,
+    resolvedRole,
+    deletedAt ?? null,
+    customerProfile,
+  );
+
+  return upserted;
+}
+
 async function main() {
-  console.log("Seeding users...");
+  console.log("Seeding users and role profiles...");
 
   const passwordHash = await hashPassword(SEED_USER_PASSWORD);
 
   for (const user of seedUsers) {
-    const { email, deletedAt, role, ...profile } = user;
-
-    await prisma.user.upsert({
-      where: { email },
-      create: {
-        ...profile,
-        email: email.toLowerCase(),
-        passwordHash,
-        role: role ?? "customer",
-        deletedAt: deletedAt ?? null,
-      },
-      update: {
-        ...profile,
-        email: email.toLowerCase(),
-        passwordHash,
-        role: role ?? "customer",
-        deletedAt: deletedAt ?? null,
-      },
-    });
+    await upsertSeedUser(user, passwordHash);
   }
 
   const activeUsers = await prisma.user.count({ where: { deletedAt: null } });
   const deletedUsers = await prisma.user.count({
     where: { deletedAt: { not: null } },
   });
+  const adminProfiles = await prisma.adminProfile.count();
+  const customerProfiles = await prisma.customerProfile.count();
 
   console.log(
     `Users seeded: ${activeUsers} active, ${deletedUsers} soft-deleted.`,
+  );
+  console.log(
+    `Profiles seeded: ${adminProfiles} admin, ${customerProfiles} customer.`,
   );
 
   console.log("Seeding programs...");
@@ -384,10 +526,13 @@ async function main() {
 
     const owner = await prisma.user.findUnique({
       where: { email: ownerEmail.toLowerCase() },
+      include: { adminProfile: true },
     });
 
-    if (!owner) {
-      throw new Error(`Seed program owner not found: ${ownerEmail}`);
+    if (!owner?.adminProfile) {
+      throw new Error(
+        `Seed program owner must be an admin with a profile: ${ownerEmail}`,
+      );
     }
 
     const data = {
@@ -395,7 +540,7 @@ async function main() {
       defaultUnitWaterSavings,
       defaultUnitCost,
       budget,
-      userId: owner.id,
+      adminUserId: owner.adminProfile.userId,
       deletedAt: deletedAt ?? null,
     };
 
@@ -423,6 +568,20 @@ async function main() {
   console.log(
     `Programs seeded: ${activePrograms} active, ${deletedPrograms} soft-deleted.`,
   );
+
+  const removedOrphanAdminProfiles = await prisma.adminProfile.deleteMany({
+    where: {
+      user: { role: { not: "admin" } },
+      programs: { none: {} },
+      programBudgetLog: { none: {} },
+    },
+  });
+
+  if (removedOrphanAdminProfiles.count > 0) {
+    console.log(
+      `Removed ${removedOrphanAdminProfiles.count} orphan admin profile(s) from migrated non-admin owners.`,
+    );
+  }
 }
 
 main()

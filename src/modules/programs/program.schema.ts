@@ -142,7 +142,7 @@ export const publicProgramSelect = {
   commercial: true,
   programStart: true,
   programEnd: true,
-  userId: true,
+  adminUserId: true,
   grantFunding: true,
   thirdParty: true,
   deletedAt: true,
@@ -208,7 +208,7 @@ export const publicProgramBudgetLogSelect = {
   updatedAt: true,
   deletedAt: true,
   programId: true,
-  userId: true,
+  adminUserId: true,
   comment: true,
 } satisfies Prisma.ProgramBudgetLogSelect;
 
@@ -236,7 +236,7 @@ export type CreateProgramBudgetLogBody = z.infer<
 >;
 
 export type BudgetLogMetaData = {
-  userId: string;
+  adminUserId: string;
   previousBudget: Prisma.Decimal;
   newBudget: number;
 };

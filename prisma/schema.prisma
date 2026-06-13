@@ -27,7 +27,7 @@ model User {
   createdAt    DateTime  @default(now())        @map("created_at")
   updatedAt    DateTime  @updatedAt             @map("updated_at")
   programs Program[]
-  // programBudgetLog ProgramBudgetLog[]
+  programBudgetLog ProgramBudgetLog[]
   // waterSavingsLog WaterSavingsLog[]
   // staffAssignments  StatusLog[]   @relation("StaffAssignment")
   // statusLog StatusLog[]
@@ -60,10 +60,30 @@ model Program {
   createdAt               DateTime  @default(now())     @map("created_at")
   updatedAt               DateTime  @updatedAt          @map("updated_at")
   deletedAt               DateTime? @map("deleted_at")
+  budgetLogs              ProgramBudgetLog[]
 
   @@index([createdAt])
   @@index([userId])
   @@map("programs")
 }
+
+model ProgramBudgetLog {
+  id              String @id @default(cuid())
+  previousBudget  Decimal?  @db.Decimal(12, 2) @map("previous_budget")
+  newBudget       Decimal @db.Decimal(12, 2) @map("new_budget")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt  @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+  programId       String  @map("program_id")
+  program         Program @relation(fields: [programId], references: [id])
+  userId          String  @map("user_id")
+  user            User    @relation(fields: [userId], references: [id])
+  comment         String?
+
+  @@index([programId])
+  @@index([userId])
+  @@map("program_budget_logs")
+}
+
 
 

@@ -42,6 +42,10 @@ export async function buildApp() {
   });
   await app.register(cors, {
     origin: env.NODE_ENV === "production" ? false : true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id"],
+    credentials: true,
+    maxAge: 86400,
   });
   await app.register(prismaPlugin);
   await app.register(routes, { prefix: "/api/v1" });

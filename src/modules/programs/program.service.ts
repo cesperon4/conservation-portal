@@ -1,3 +1,4 @@
+import { Prisma } from "../../generated/prisma/client.js";
 import { NotFoundError } from "../../lib/errors.js";
 import type {
   CreateProgramBody,
@@ -5,11 +6,19 @@ import type {
   ProgramNameRow,
   ProgramPublicRow,
   UpdateProgramBody,
+  ListProgramBudgetLogQuery,
+  ProgramBudgetLogParams,
+  CreateProgramBudgetLogBody,
+  UpdateProgramBudgetLogBody,
 } from "./program.schema.js";
 import { ProgramRepository } from "./program.repository.js";
+import { UserService } from "../users/user.service.js";
 
 export class ProgramService {
-  constructor(private readonly programs: ProgramRepository) {}
+  constructor(
+    private readonly programs: ProgramRepository,
+    private readonly users: UserService,
+  ) {}
 
   async list(filters: ListProgramsQuery) {
     const rows = await this.programs.findManyActive(filters);
@@ -67,43 +76,117 @@ export class ProgramService {
   }
 
   async update(id: string, input: UpdateProgramBody) {
-    await this.getById(id);
-
-    return this.programs.update(id, {
+    await this.users.getById(input.userId);
+    const program = await this.getById(id);
+    const data = {
       ...(input.name !== undefined && { name: input.name }),
-      ...(input.description !== undefined && { description: input.description }),
+      ...(input.description !== undefined && {
+        description: input.description,
+      }),
       ...(input.defaultUnitWaterSavings !== undefined && {
         defaultUnitWaterSavings: input.defaultUnitWaterSavings,
       }),
       ...(input.defaultUnitCost !== undefined && {
         defaultUnitCost: input.defaultUnitCost,
       }),
-      ...(input.budget !== undefined && { budget: input.budget }),
-      ...(input.defaultUnit !== undefined && { defaultUnit: input.defaultUnit }),
+      ...(input.defaultUnit !== undefined && {
+        defaultUnit: input.defaultUnit,
+      }),
       ...(input.singleFamilyHome !== undefined && {
         singleFamilyHome: input.singleFamilyHome,
       }),
       ...(input.multiFamilyComplex !== undefined && {
         multiFamilyComplex: input.multiFamilyComplex,
       }),
-      ...(input.residential !== undefined && { residential: input.residential }),
+      ...(input.residential !== undefined && {
+        residential: input.residential,
+      }),
       ...(input.commercial !== undefined && { commercial: input.commercial }),
       ...(input.programStart !== undefined && {
         programStart: input.programStart,
       }),
       ...(input.programEnd !== undefined && { programEnd: input.programEnd }),
-      ...(input.userId !== undefined && {
-        user: { connect: { id: input.userId } },
-      }),
       ...(input.grantFunding !== undefined && {
         grantFunding: input.grantFunding,
       }),
       ...(input.thirdParty !== undefined && { thirdParty: input.thirdParty }),
-    });
+    };
+
+    if (input.budget === undefined || program.budget.equals(input.budget)) {
+      return this.programs.update(id, data);
+    }
+
+    return this.programs.updateWithBudgetLog(
+      id,
+      { ...data, budget: input.budget },
+      {
+        userId: input.userId,
+        previousBudget: program.budget,
+        newBudget: input.budget,
+      },
+    );
   }
 
   async softDelete(id: string) {
     await this.getById(id);
     await this.programs.softDelete(id);
+  }
+
+  //program budget logs
+  async listBudgetLogs(id: string, filters: ListProgramBudgetLogQuery) {
+    await this.getById(id);
+    const rows = await this.programs.findBudgetLogsManyActive(id, filters);
+    const hasMore = rows.length > filters.limit;
+    const budgetLogs = hasMore ? rows.slice(0, -1) : rows;
+    const lastProgramLog = budgetLogs.at(-1);
+    const pagination = {
+      limit: filters.limit,
+      nextCursor: hasMore && lastProgramLog ? lastProgramLog.id : null,
+      hasMore,
+    };
+    return {
+      budgetLogs: budgetLogs,
+      pagination,
+    };
+  }
+
+  async getBudgetLogById({ id, budgetLogId }: ProgramBudgetLogParams) {
+    await this.getById(id);
+    const budgetLog = await this.programs.findActiveBudgetLogById(
+      id,
+      budgetLogId,
+    );
+    if (!budgetLog) throw new NotFoundError("Budget log not found");
+    return budgetLog;
+  }
+
+  async createBudgetLog(id: string, input: CreateProgramBudgetLogBody) {
+    const program = await this.getById(id);
+    await this.users.getById(input.userId);
+    return this.programs.createBudgetLog({
+      previousBudget: program.budget,
+      ...(input.comment !== undefined && { comment: input.comment }),
+      newBudget: input.newBudget,
+      program: { connect: { id } },
+      user: { connect: { id: input.userId } }, //derive userId from authToken not request body
+    });
+  }
+
+  async updateBudgetLog(
+    programId: string,
+    budgetLogId: string,
+    input: UpdateProgramBudgetLogBody,
+  ) {
+    try {
+      return await this.programs.updateBudgetLog(programId, budgetLogId, input);
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2025"
+      ) {
+        throw new NotFoundError("Budget log not found");
+      }
+      throw err;
+    }
   }
 }

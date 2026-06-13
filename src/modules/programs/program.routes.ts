@@ -1,6 +1,9 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { mapProgramToResponse } from "./program.mapper.js";
+import {
+  mapProgramBudgetLogToResponse,
+  mapProgramToResponse,
+} from "./program.mapper.js";
 import {
   createProgramBodySchema,
   programIdParamsSchema,
@@ -8,6 +11,12 @@ import {
   programResponseSchema,
   programsListResponseSchema,
   updateProgramBodySchema,
+  programBudgetLogQuerySchema,
+  programBudgetLogListSchema,
+  programBudgetLogResponseSchema,
+  programBudgetLogParamsSchema,
+  createProgramBudgetLogBodySchema,
+  updateProgramBudgetLogBodySchema,
 } from "./program.schema.js";
 
 const programRoutes: FastifyPluginAsyncZod = async (fastify) => {
@@ -84,6 +93,7 @@ const programRoutes: FastifyPluginAsyncZod = async (fastify) => {
         request.params.id,
         request.body,
       );
+
       return mapProgramToResponse(program);
     },
   );
@@ -100,6 +110,87 @@ const programRoutes: FastifyPluginAsyncZod = async (fastify) => {
     async (request, reply) => {
       await fastify.programService.softDelete(request.params.id);
       return reply.status(204).send(null);
+    },
+  );
+
+  //budget logs
+  fastify.get(
+    "/:id/budget-logs",
+    {
+      schema: {
+        tags: ["programs"],
+        params: programIdParamsSchema,
+        querystring: programBudgetLogQuerySchema,
+        response: { 200: programBudgetLogListSchema },
+      },
+    },
+    async (request) => {
+      const rows = await fastify.programService.listBudgetLogs(
+        request.params.id,
+        request.query,
+      );
+
+      return {
+        data: rows.budgetLogs.map(mapProgramBudgetLogToResponse),
+        pagination: rows.pagination,
+      };
+    },
+  );
+
+  fastify.get(
+    "/:id/budget-logs/:budgetLogId",
+    {
+      schema: {
+        tags: ["programs"],
+        params: programBudgetLogParamsSchema,
+        response: { 200: programBudgetLogResponseSchema },
+      },
+    },
+    async (request) => {
+      const row = await fastify.programService.getBudgetLogById(request.params);
+      return mapProgramBudgetLogToResponse(row);
+    },
+  );
+
+  fastify.post(
+    "/:id/budget-logs",
+    {
+      schema: {
+        tags: ["programs"],
+        params: programIdParamsSchema,
+        body: createProgramBudgetLogBodySchema,
+        response: { 201: programBudgetLogResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const row = await fastify.programService.createBudgetLog(
+        request.params.id,
+        request.body,
+      );
+
+      return reply.status(201).send(mapProgramBudgetLogToResponse(row));
+    },
+  );
+
+  fastify.patch(
+    "/:id/budget-logs/:budgetLogId",
+    {
+      schema: {
+        tags: ["programs"],
+        params: programBudgetLogParamsSchema,
+        body: updateProgramBudgetLogBodySchema,
+        response: { 200: programBudgetLogResponseSchema },
+      },
+    },
+    async (request) => {
+      const { budgetLogId, id } = request.params;
+      const row = await fastify.programService.updateBudgetLog(
+        id,
+        budgetLogId,
+        request.body,
+      );
+
+      return mapProgramBudgetLogToResponse(row);
     },
   );
 };

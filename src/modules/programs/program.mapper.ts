@@ -4,6 +4,8 @@ import type {
   ProgramNameRow,
   ProgramPublicRow,
   ProgramResponse,
+  ProgramBudgetLogResponse,
+  ProgramBudgetLogRow,
 } from "./program.schema.js";
 
 export function mapProgramToResponse(row: ProgramPublicRow): ProgramResponse {
@@ -27,6 +29,25 @@ export function mapProgramToResponse(row: ProgramPublicRow): ProgramResponse {
     deletedAt: row.deletedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  };
+}
+
+export function mapProgramBudgetLogToResponse(
+  row: ProgramBudgetLogRow,
+): ProgramBudgetLogResponse {
+  const previousBudget = row.previousBudget
+    ? decimalToString(row.previousBudget, 2)
+    : null;
+  return {
+    id: row.id,
+    previousBudget,
+    newBudget: decimalToString(row.newBudget, 2),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    deletedAt: row.deletedAt,
+    programId: row.programId,
+    userId: row.userId,
+    comment: row.comment,
   };
 }
 

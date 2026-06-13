@@ -6,13 +6,17 @@ export const programIdParamsSchema = z.object({
   id: z.string().cuid(),
 });
 
-export const programQuerySchema = z.object({
+const listPaginationFields = {
   limit: z.coerce.number().int().min(1).max(100).default(20),
+  direction: z.enum(["asc", "desc"]).default("desc"),
+  cursor: z.string().cuid().optional(),
+} as const;
+
+export const programQuerySchema = z.object({
+  ...listPaginationFields,
   view: z.enum(["full", "name"]).default("full"),
   status: z.enum(["active", "deleted", "all"]).default("active"),
   column: z.enum(["createdAt", "name"]).default("createdAt"),
-  direction: z.enum(["asc", "desc"]).default("desc"),
-  cursor: z.string().cuid().optional(),
 });
 
 export type ListProgramsQuery = z.infer<typeof programQuerySchema>;
@@ -34,6 +38,7 @@ export const createProgramBodySchema = z.object({
   grantFunding: z.number().finite(),
   thirdParty: z.boolean().default(false),
 });
+export type CreateProgramBody = z.infer<typeof createProgramBodySchema>;
 
 export const updateProgramBodySchema = z.object({
   name: z.string().min(1).max(255).optional(),
@@ -48,7 +53,7 @@ export const updateProgramBodySchema = z.object({
   commercial: z.boolean().optional(),
   programStart: z.coerce.date().optional(),
   programEnd: z.coerce.date().optional(),
-  userId: z.string().cuid().optional(),
+  userId: z.string().cuid(), //must come from token
   grantFunding: z.number().finite().optional(),
   thirdParty: z.boolean().optional(),
 });
@@ -150,7 +155,6 @@ export const programSelectByView = {
   name: nameSelect,
 } satisfies Record<ListProgramsQuery["view"], Prisma.ProgramSelect>;
 
-export type CreateProgramBody = z.infer<typeof createProgramBodySchema>;
 export type UpdateProgramBody = z.infer<typeof updateProgramBodySchema>;
 export type ProgramResponse = z.infer<typeof programResponseSchema>;
 export type ProgramNameResponse = z.infer<typeof programNameSchema>;
@@ -162,3 +166,90 @@ export type ProgramPublicRow = Prisma.ProgramGetPayload<{
 export type ProgramNameRow = Prisma.ProgramGetPayload<{
   select: typeof nameSelect;
 }>;
+
+/* Budget Logs */
+
+export const programBudgetLogQuerySchema = z.object({
+  ...listPaginationFields,
+  status: z.enum(["active", "deleted", "all"]).default("active"),
+  column: z.enum(["createdAt", "updatedAt"]).default("createdAt"),
+});
+
+export type ListProgramBudgetLogQuery = z.infer<
+  typeof programBudgetLogQuerySchema
+>;
+
+export const programBudgetLogResponseSchema = z.object({
+  id: z.string().cuid(),
+  previousBudget: z.string().nullable(),
+  newBudget: z.string(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  deletedAt: z.coerce.date().nullable(),
+  programId: z.string().cuid(),
+  userId: z.string().cuid(),
+  comment: z.string().nullable(),
+});
+
+export type ProgramBudgetLogResponse = z.infer<
+  typeof programBudgetLogResponseSchema
+>;
+
+export const programBudgetLogListSchema = z.object({
+  data: z.array(programBudgetLogResponseSchema),
+  pagination: programPaginationSchema,
+});
+
+export const publicProgramBudgetLogSelect = {
+  id: true,
+  previousBudget: true,
+  newBudget: true,
+  createdAt: true,
+  updatedAt: true,
+  deletedAt: true,
+  programId: true,
+  userId: true,
+  comment: true,
+} satisfies Prisma.ProgramBudgetLogSelect;
+
+export type ProgramBudgetLogRow = Prisma.ProgramBudgetLogGetPayload<{
+  select: typeof publicProgramBudgetLogSelect;
+}>;
+
+export const programBudgetLogParamsSchema = z.object({
+  id: z.string().cuid(),
+  budgetLogId: z.string().cuid(),
+});
+
+export type ProgramBudgetLogParams = z.infer<
+  typeof programBudgetLogParamsSchema
+>;
+
+export const createProgramBudgetLogBodySchema = z.object({
+  newBudget: decimalInput(12, 2),
+  userId: z.string().cuid(),
+  comment: z.string().optional(),
+});
+
+export type CreateProgramBudgetLogBody = z.infer<
+  typeof createProgramBudgetLogBodySchema
+>;
+
+export type BudgetLogMetaData = {
+  userId: string;
+  previousBudget: Prisma.Decimal;
+  newBudget: number;
+};
+
+export const updateProgramBudgetLogBodySchema = z.object({
+  comment: z
+    .string()
+    .trim()
+    .max(2000)
+    .nullable()
+    .transform((v) => (v === "" ? null : v)),
+});
+
+export type UpdateProgramBudgetLogBody = z.infer<
+  typeof updateProgramBudgetLogBodySchema
+>;

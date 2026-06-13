@@ -12,7 +12,7 @@ declare module "fastify" {
 
 const programsModule: FastifyPluginAsync = async (fastify) => {
   const repository = new ProgramRepository(fastify.prisma);
-  const service = new ProgramService(repository);
+  const service = new ProgramService(repository, fastify.userService);
 
   fastify.decorate("programService", service);
   await fastify.register(programRoutes, { prefix: "/programs" });
@@ -20,5 +20,5 @@ const programsModule: FastifyPluginAsync = async (fastify) => {
 
 export default fp(programsModule, {
   name: "programs-module",
-  dependencies: ["prisma"],
+  dependencies: ["prisma", "users-module"],
 });

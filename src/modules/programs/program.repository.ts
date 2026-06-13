@@ -1,8 +1,18 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
-import type { ListProgramsQuery } from "./program.schema.js";
-import { programSelectByView, publicProgramSelect } from "./program.schema.js";
+import type {
+  ListProgramsQuery,
+  ListProgramBudgetLogQuery,
+  BudgetLogMetaData,
+} from "./program.schema.js";
+import {
+  programSelectByView,
+  publicProgramSelect,
+  publicProgramBudgetLogSelect,
+} from "./program.schema.js";
 
-const activeProgramWhere = { deletedAt: null } satisfies Prisma.ProgramWhereInput;
+const activeProgramWhere = {
+  deletedAt: null,
+} satisfies Prisma.ProgramWhereInput;
 
 export class ProgramRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -31,9 +41,21 @@ export class ProgramRepository {
   }
 
   create(data: Prisma.ProgramCreateInput) {
-    return this.prisma.program.create({
-      data,
-      select: publicProgramSelect,
+    return this.prisma.$transaction(async (tx) => {
+      const created = await tx.program.create({
+        data,
+        select: publicProgramSelect,
+      });
+
+      await tx.programBudgetLog.create({
+        data: {
+          user: { connect: { id: created.userId } },
+          program: { connect: { id: created.id } },
+          newBudget: created.budget,
+        },
+      });
+
+      return created;
     });
   }
 
@@ -45,10 +67,82 @@ export class ProgramRepository {
     });
   }
 
+  updateWithBudgetLog(
+    id: string,
+    data: Prisma.ProgramUpdateInput,
+    budgetLogData: BudgetLogMetaData,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.program.update({
+        where: { id },
+        data,
+        select: publicProgramSelect,
+      });
+
+      await tx.programBudgetLog.create({
+        data: {
+          user: { connect: { id: budgetLogData.userId } },
+          program: { connect: { id: updated.id } },
+          newBudget: budgetLogData.newBudget,
+          previousBudget: budgetLogData.previousBudget,
+        },
+      });
+      return updated;
+    });
+  }
+
   softDelete(id: string) {
     return this.prisma.program.update({
       where: { id },
       data: { deletedAt: new Date() },
+    });
+  }
+
+  findBudgetLogsManyActive(
+    id: string,
+    { limit, cursor, column, direction }: ListProgramBudgetLogQuery,
+  ) {
+    const whereClause = {
+      programId: id,
+      deletedAt: null,
+    } satisfies Prisma.ProgramBudgetLogWhereInput;
+    return this.prisma.programBudgetLog.findMany({
+      select: publicProgramBudgetLogSelect,
+      where: whereClause,
+      take: limit + 1,
+      orderBy: [{ [column]: direction }, { id: direction }],
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+    });
+  }
+
+  findActiveBudgetLogById(id: string, budgetLogId: string) {
+    return this.prisma.programBudgetLog.findFirst({
+      select: publicProgramBudgetLogSelect,
+      where: { id: budgetLogId, programId: id, deletedAt: null },
+    });
+  }
+
+  createBudgetLog(data: Prisma.ProgramBudgetLogCreateInput) {
+    return this.prisma.programBudgetLog.create({
+      data,
+      select: publicProgramBudgetLogSelect,
+    });
+  }
+
+  updateBudgetLog(
+    programId: string,
+    budgetLogId: string,
+    data: Prisma.ProgramBudgetLogUpdateInput,
+  ) {
+    return this.prisma.programBudgetLog.update({
+      where: {
+        id: budgetLogId,
+        programId,
+        deletedAt: null,
+        program: { deletedAt: null },
+      },
+      data,
+      select: publicProgramBudgetLogSelect,
     });
   }
 }

@@ -68,6 +68,7 @@ model CustomerProfile {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt  @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
+  properties  Property[]
 
   @@map("customer_profiles")
   @@index([createdAt])
@@ -86,6 +87,7 @@ model Program {
   multiFamilyComplex      Boolean   @map("multi_family_complex") @default(false)
   residential             Boolean   @default(false)
   commercial              Boolean   @default(false)
+  landscape               Boolean   @default(false)
   programStart            DateTime  @map("program_start")
   programEnd              DateTime  @map("program_end")
   adminUserId             String    @map("admin_user_id")
@@ -100,6 +102,49 @@ model Program {
   @@index([createdAt])
   @@index([adminUserId])
   @@map("programs")
+}
+
+enum PropertyCategory {
+  singleFamilyHome
+  residential
+  multiFamilyComplex
+  commercial
+  landscape
+}
+
+enum PropertySource {
+  manual
+  acwd
+}
+
+model Property {
+  id  String  @id @default(cuid())
+  customerUserId  String @map("customer_user_id")
+  customer  CustomerProfile @relation(fields:[customerUserId], references: [userId], onDelete: Restrict)
+
+  streetLine1 String  @map("street_line_1") @db.VarChar(255)
+  streetLine2 String?  @map("street_line_2") @db.VarChar(255)
+  city  String  @db.VarChar(50)
+  state String  @db.VarChar(50)
+  postalCode  String  @map("postal_code") @db.VarChar(50)
+  category  PropertyCategory
+
+  acwdAccountNo String? @map("acwd_account_no") @db.VarChar(8)
+  acwdLocationNo  String? @map("acwd_location_no")  @db.VarChar(10)
+  source  PropertySource  @default(manual)
+
+  createdAt DateTime  @map("created_at")  @default(now())
+  updatedAt DateTime  @updatedAt  @map("updated_at") 
+  deletedAt DateTime? @map("deleted_at")
+
+  @@map("properties")
+  @@index([customerUserId])
+  @@index([createdAt])
+  @@index([deletedAt])
+  @@index([acwdAccountNo])
+  @@index([customerUserId, deletedAt])
+  @@unique([customerUserId, acwdAccountNo, acwdLocationNo])
+
 }
 
 model ProgramBudgetLog {
@@ -119,6 +164,74 @@ model ProgramBudgetLog {
   @@index([adminUserId])
   @@map("program_budget_logs")
 }
+
+model AcwdAccount {
+  accountNo String @id @map("account_no")  @db.VarChar(8)
+  accountStat String?  @map("account_stat")  @db.VarChar(5)
+  accountClass  String?  @map("account_class") @db.VarChar(10)
+  personNo  String  @map("person_no") @db.VarChar(10)
+  addrSeqDefault  Int?  @map("addr_seq_default") @db.SmallInt
+  importedAt  DateTime  @map("imported_at")
+
+  @@index([personNo])
+  @@map("acwd_accounts")
+}
+
+model AcwdLocation {
+  locationNo     String   @id @map("location_no") @db.VarChar(10)
+  locationStat   String   @map("location_stat") @db.VarChar(5)
+  locationClass  String   @map("location_class") @db.VarChar(10)
+  houseNo        String?  @map("house_no") @db.VarChar(20)
+  streetPfxDir   String?  @map("street_pfx_dir") @db.VarChar(10)
+  streetName     String?   @map("street_name") @db.VarChar(60)
+  streetNmSfx    String?  @map("street_nm_sfx") @db.VarChar(10)
+  streetSfxDir   String?  @map("street_sfx_dir") @db.VarChar(10)
+  secAddrId      String?  @map("sec_addr_id") @db.VarChar(10)
+  secAddrRange   String?  @map("sec_addr_range") @db.VarChar(20)
+  city           String   @db.VarChar(30)
+  provinceCd     String   @map("province_cd") @db.VarChar(5)
+  postalCode     String   @map("postal_code") @db.VarChar(13)
+  importedAt     DateTime @map("imported_at")
+
+  @@index([postalCode])
+  @@map("acwd_locations")
+}
+
+model AcwdMoveInOut {
+  id           String    @id @db.VarChar(10)
+  locationNo   String    @map("location_no") @db.VarChar(10)
+  accountNo    String    @map("account_no") @db.VarChar(8)
+  moveInDate   DateTime  @map("move_in_date")
+  moveOutDate  DateTime? @map("move_out_date")
+  status       String    @db.VarChar(5)
+  statusDate   DateTime? @map("status_date")
+  importedAt   DateTime  @map("imported_at")
+
+  @@index([accountNo, status])
+  @@index([locationNo])
+  @@map("acwd_moveinouts")
+}
+
+enum AcwdImportStatus {
+  running
+  success
+  failed
+}
+
+model AcwdImportRun {
+  id               String           @id @default(cuid())
+  status           AcwdImportStatus
+  startedAt        DateTime         @default(now()) @map("started_at")
+  finishedAt       DateTime?        @map("finished_at")
+  accountsCount    Int              @default(0) @map("accounts_count")
+  locationsCount   Int              @default(0) @map("locations_count")
+  moveinoutsCount  Int              @default(0) @map("moveinouts_count")
+  sourceDir        String?          @map("source_dir") @db.VarChar(500)
+  errorMessage     String?          @map("error_message")
+
+  @@map("acwd_import_runs")
+}
+
 
 
 

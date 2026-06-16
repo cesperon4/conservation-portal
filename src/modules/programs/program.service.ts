@@ -19,7 +19,6 @@ export class ProgramService {
     private readonly programs: ProgramRepository,
     private readonly users: UserService,
   ) {}
-
   async list(filters: ListProgramsQuery) {
     const rows = await this.programs.findManyActive(filters);
 
@@ -130,7 +129,7 @@ export class ProgramService {
 
   async softDelete(id: string) {
     await this.getById(id);
-    await this.programs.softDelete(id);
+    this.programs.softDelete(id);
   }
 
   //program budget logs

@@ -3,6 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import type { Role } from "../src/generated/prisma/client.js";
 import { hashPassword } from "../src/lib/password.js";
+import { seedProperties } from "./seed-properties.js";
 
 /** Default password for all seeded users (development only). */
 export const SEED_USER_PASSWORD = "Password123!";
@@ -582,6 +583,8 @@ async function main() {
       `Removed ${removedOrphanAdminProfiles.count} orphan admin profile(s) from migrated non-admin owners.`,
     );
   }
+
+  await seedProperties(prisma);
 }
 
 main()

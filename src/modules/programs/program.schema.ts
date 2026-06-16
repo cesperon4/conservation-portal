@@ -6,7 +6,7 @@ export const programIdParamsSchema = z.object({
   id: z.string().cuid(),
 });
 
-const listPaginationFields = {
+export const listPaginationFields = {
   limit: z.coerce.number().int().min(1).max(100).default(20),
   direction: z.enum(["asc", "desc"]).default("desc"),
   cursor: z.string().cuid().optional(),
@@ -85,7 +85,7 @@ export const programNameSchema = programResponseSchema.pick({
   name: true,
 });
 
-export const programPaginationSchema = z.object({
+export const paginationSchema = z.object({
   limit: z.number().int(),
   nextCursor: z.string().cuid().nullable(),
   hasMore: z.boolean(),
@@ -105,7 +105,7 @@ function createProgramListResponseSchema<V extends ProgramView>(
   return z.object({
     view: z.literal(view),
     data: z.array(itemSchema),
-    pagination: programPaginationSchema,
+    pagination: paginationSchema,
   });
 }
 
@@ -197,7 +197,7 @@ export type ProgramBudgetLogResponse = z.infer<
 
 export const programBudgetLogListSchema = z.object({
   data: z.array(programBudgetLogResponseSchema),
-  pagination: programPaginationSchema,
+  pagination: paginationSchema,
 });
 
 export const publicProgramBudgetLogSelect = {

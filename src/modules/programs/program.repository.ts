@@ -3,11 +3,13 @@ import type {
   ListProgramsQuery,
   ListProgramBudgetLogQuery,
   BudgetLogMetaData,
+  ListProgramStatusesQuery,
 } from "./program.schema.js";
 import {
   programSelectByView,
   publicProgramSelect,
   publicProgramBudgetLogSelect,
+  publicProgramStatusSelect,
 } from "./program.schema.js";
 
 const activeProgramWhere = {
@@ -143,6 +145,70 @@ export class ProgramRepository {
       },
       data,
       select: publicProgramBudgetLogSelect,
+    });
+  }
+
+  //program status
+  createStatus(data: Prisma.ProgramStatusCreateInput) {
+    return this.prisma.programStatus.create({
+      data,
+      select: publicProgramStatusSelect,
+    });
+  }
+
+  findProgramStatusesManyActive(
+    programId: string,
+    filters: ListProgramStatusesQuery,
+  ) {
+    const where = {
+      programId,
+      deletedAt: null,
+      program: { deletedAt: null },
+      ...(filters.milestone !== undefined && { milestone: filters.milestone }),
+    };
+    return this.prisma.programStatus.findMany({
+      where,
+      select: publicProgramStatusSelect,
+      orderBy: { sortOrder: "asc" },
+    });
+  }
+
+  findActiveStatusById(programId: string, statusId: string) {
+    return this.prisma.programStatus.findFirst({
+      select: publicProgramStatusSelect,
+      where: {
+        id: statusId,
+        programId,
+        deletedAt: null,
+        program: { deletedAt: null },
+      },
+    });
+  }
+
+  findStatusBySortOrder(programId: string, sortOrder: number) {
+    return this.prisma.programStatus.findUnique({
+      where: {
+        programId_sortOrder: {
+          programId,
+          sortOrder,
+        },
+      },
+    });
+  }
+
+  updateStatus(statusId: string, data: Prisma.ProgramStatusUpdateInput) {
+    return this.prisma.programStatus.update({
+      where: { id: statusId, deletedAt: null, program: { deletedAt: null } },
+      data,
+      select: publicProgramStatusSelect,
+    });
+  }
+
+  softDeleteStatus(statusId: string) {
+    return this.prisma.programStatus.update({
+      where: { id: statusId, deletedAt: null, program: { deletedAt: null } },
+      data: { deletedAt: new Date() },
+      select: publicProgramStatusSelect,
     });
   }
 }

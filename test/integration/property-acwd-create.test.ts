@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { HttpError } from "../../src/lib/errors.js";
 import { AcwdLookupService } from "../../src/modules/acwd/acwd-lookup.service.js";
 import { AcwdRepository } from "../../src/modules/acwd/acwd.repository.js";
 import { PropertyRepository } from "../../src/modules/properties/property.repository.js";
@@ -11,6 +10,11 @@ import {
   FIXTURE_ACCOUNTS,
   seedAcwdFixtures,
 } from "../helpers/acwd-fixtures.js";
+import {
+  createTestCustomer,
+  deleteTestCustomer,
+} from "../helpers/customer.js";
+import { expectHttpError } from "../helpers/http-error.js";
 import { createTestPrisma } from "../helpers/prisma.js";
 
 describe("PropertyService ACWD create (integration)", () => {
@@ -27,23 +31,7 @@ describe("PropertyService ACWD create (integration)", () => {
     await prisma.$connect();
     await seedAcwdFixtures(prisma);
 
-    const customer = await prisma.user.create({
-      data: {
-        firstName: "Property",
-        lastName: "Test",
-        email: `property-acwd-test-${Date.now()}@example.com`,
-        passwordHash: "test-hash",
-        role: "customer",
-        customerProfile: {
-          create: {
-            mailingAddress: "1 Test St",
-            mailingCity: "Fremont",
-            mailingState: "CA",
-            mailingZip: "94536",
-          },
-        },
-      },
-    });
+    const customer = await createTestCustomer(prisma, "property-acwd");
     customerUserId = customer.id;
   });
 
@@ -52,9 +40,7 @@ describe("PropertyService ACWD create (integration)", () => {
   });
 
   afterAll(async () => {
-    await prisma.property.deleteMany({ where: { customerUserId } });
-    await prisma.customerProfile.deleteMany({ where: { userId: customerUserId } });
-    await prisma.user.deleteMany({ where: { id: customerUserId } });
+    await deleteTestCustomer(prisma, customerUserId);
     await cleanupAcwdFixtures(prisma);
     await prisma.$disconnect();
   });
@@ -81,12 +67,23 @@ describe("PropertyService ACWD create (integration)", () => {
   it("rejects duplicate active ACWD registration with 409", async () => {
     await propertyService.create(acwdCreateInput());
 
-    await expect(propertyService.create(acwdCreateInput())).rejects.toSatisfy(
-      (err: unknown) =>
-        err instanceof HttpError &&
-        err.statusCode === 409 &&
-        err.message ===
-          "This ACWD account is already registered for this customer",
+    await expectHttpError(
+      propertyService.create(acwdCreateInput()),
+      409,
+      "This ACWD account is already registered for this customer",
+    );
+  });
+
+  it("propagates ACWD lookup failures", async () => {
+    await expectHttpError(
+      propertyService.create({
+        customerUserId,
+        source: "acwd",
+        acwdAccountNo: FIXTURE_ACCOUNTS.active,
+        postalCode: "94000",
+      }),
+      400,
+      "Account number and ZIP do not match",
     );
   });
 

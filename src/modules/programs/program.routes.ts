@@ -17,6 +17,12 @@ import {
   programBudgetLogParamsSchema,
   createProgramBudgetLogBodySchema,
   updateProgramBudgetLogBodySchema,
+  programStatusesQuerySchema,
+  programStatusParamsSchema,
+  listProgramStatusesResponseSchema,
+  programStatusResponseSchema,
+  createProgramStatusBodySchema,
+  updateProgramStatusBodySchema,
 } from "./program.schema.js";
 
 const programRoutes: FastifyPluginAsyncZod = async (fastify) => {
@@ -191,6 +197,92 @@ const programRoutes: FastifyPluginAsyncZod = async (fastify) => {
       );
 
       return mapProgramBudgetLogToResponse(row);
+    },
+  );
+
+  //program statuses
+
+  fastify.get(
+    "/:id/statuses",
+    {
+      schema: {
+        params: programIdParamsSchema,
+        querystring: programStatusesQuerySchema,
+        tags: ["programs"],
+        response: { 200: listProgramStatusesResponseSchema },
+      },
+    },
+    async (request) => {
+      const rows = await fastify.programService.listStatuses(
+        request.params.id,
+        request.query,
+      );
+      return { data: rows };
+    },
+  );
+
+  fastify.post(
+    "/:id/statuses",
+    {
+      schema: {
+        params: programIdParamsSchema,
+        body: createProgramStatusBodySchema,
+        tags: ["programs"],
+        response: { 201: programStatusResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const status = await fastify.programService.createStatus(
+        request.params.id,
+        request.body,
+      );
+      return reply.status(201).send(status);
+    },
+  );
+
+  fastify.get(
+    "/:id/statuses/:statusId",
+    {
+      schema: {
+        params: programStatusParamsSchema,
+        tags: ["programs"],
+        response: { 200: programStatusResponseSchema },
+      },
+    },
+    async (request) => {
+      return fastify.programService.getStatusById(request.params);
+    },
+  );
+
+  fastify.patch(
+    "/:id/statuses/:statusId",
+    {
+      schema: {
+        params: programStatusParamsSchema,
+        body: updateProgramStatusBodySchema,
+        tags: ["programs"],
+        response: { 200: programStatusResponseSchema },
+      },
+    },
+    async (request) => {
+      const { id, statusId } = request.params;
+      return fastify.programService.updateStatus(id, statusId, request.body);
+    },
+  );
+
+  fastify.delete(
+    "/:id/statuses/:statusId",
+    {
+      schema: {
+        params: programStatusParamsSchema,
+        tags: ["programs"],
+        response: { 204: z.null() },
+      },
+    },
+    async (request, reply) => {
+      const { id, statusId } = request.params;
+      await fastify.programService.softDeleteStatus(id, statusId);
+      return reply.status(204).send(null);
     },
   );
 };

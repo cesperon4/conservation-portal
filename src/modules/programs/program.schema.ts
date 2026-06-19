@@ -253,3 +253,85 @@ export const updateProgramBudgetLogBodySchema = z.object({
 export type UpdateProgramBudgetLogBody = z.infer<
   typeof updateProgramBudgetLogBodySchema
 >;
+//program status
+export const createProgramStatusBodySchema = z.object({
+  sortOrder: z.number().int(),
+  adminStepNumber: z.string().min(1).max(20),
+  customerStepNumber: z.string().min(1).max(20),
+  name: z.string().min(1).max(255),
+  customerName: z.string().min(1).max(255).optional(),
+  description: z.string().optional(),
+  milestone: z.boolean().optional(),
+  daysBeforeAlert: z.number().int().optional(),
+});
+
+export type CreateProgramStatusBody = z.infer<
+  typeof createProgramStatusBodySchema
+>;
+
+export const programStatusResponseSchema = z.object({
+  id: z.string().cuid(),
+  programId: z.string().cuid(),
+  sortOrder: z.number().int().finite(),
+  adminStepNumber: z.string(),
+  customerStepNumber: z.string(),
+  name: z.string(),
+  customerName: z.string().nullable(),
+  description: z.string().nullable(),
+  milestone: z.boolean(),
+  daysBeforeAlert: z.number().int().finite().nullable(),
+  deletedAt: z.coerce.date().nullable(),
+  updatedAt: z.coerce.date(),
+  createdAt: z.coerce.date(),
+});
+
+export const publicProgramStatusSelect = {
+  id: true,
+  programId: true,
+  sortOrder: true,
+  adminStepNumber: true,
+  customerStepNumber: true,
+  name: true,
+  customerName: true,
+  description: true,
+  milestone: true,
+  daysBeforeAlert: true,
+  deletedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.ProgramStatusSelect;
+
+export type ProgramStatusRow = Prisma.ProgramStatusGetPayload<{
+  select: typeof publicProgramStatusSelect;
+}>;
+
+export const programStatusesQuerySchema = z.object({
+  milestone: z.coerce.boolean().optional(),
+});
+
+export type ListProgramStatusesQuery = z.infer<
+  typeof programStatusesQuerySchema
+>;
+
+export const listProgramStatusesResponseSchema = z.object({
+  data: z.array(programStatusResponseSchema),
+});
+
+export const programStatusParamsSchema = z.object({
+  id: z.string().cuid(),
+  statusId: z.string().cuid(),
+});
+
+export type ProgramStatusParams = z.infer<typeof programStatusParamsSchema>;
+
+export const updateProgramStatusBodySchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  customerName: z.string().min(1).max(255).nullable().optional(),
+  description: z.string().nullable().optional(),
+  milestone: z.boolean().optional(),
+  daysBeforeAlert: z.coerce.number().int().finite().nullable().optional(),
+});
+
+export type UpdateProgramStatusBody = z.infer<
+  typeof updateProgramStatusBodySchema
+>;

@@ -98,6 +98,7 @@ model Program {
   updatedAt               DateTime  @updatedAt          @map("updated_at")
   deletedAt               DateTime? @map("deleted_at")
   budgetLogs              ProgramBudgetLog[]
+  programStatuses         ProgramStatus[]
 
   @@index([createdAt])
   @@index([adminUserId])
@@ -110,6 +111,33 @@ enum PropertyCategory {
   multiFamilyComplex
   commercial
   landscape
+}
+
+model ProgramStatus {
+  id  String  @id @default(cuid())
+  programId String  @map("program_id")
+  program Program @relation(fields: [programId], references: [id], onDelete: Restrict)
+
+  sortOrder Int @map("sort_order")
+  adminStepNumber String  @map("admin_step_number") @db.VarChar(20)
+  customerStepNumber  String  @map("customer_step_number") @db.VarChar(20)
+
+  name  String  @db.VarChar(255)
+  customerName  String? @map("customer_name") @db.VarChar(255)
+  description String? @db.Text
+
+  milestone Boolean @default(false)
+  daysBeforeAlert Int?  @map("days_before_alert")
+
+  createdAt DateTime  @map("created_at")  @default(now())
+  updatedAt DateTime  @map("updated_at")  @updatedAt
+  deletedAt DateTime? @map("deleted_at")
+
+  @@unique([programId, sortOrder])
+  @@index([programId, deletedAt])
+  @@index([programId, milestone])
+  @@map("program_statuses")
+
 }
 
 enum PropertySource {

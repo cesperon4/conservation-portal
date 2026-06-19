@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { HttpError } from "../../src/lib/errors.js";
 import { AcwdLookupService } from "../../src/modules/acwd/acwd-lookup.service.js";
 import { AcwdRepository } from "../../src/modules/acwd/acwd.repository.js";
 import {
@@ -7,21 +6,8 @@ import {
   FIXTURE_ACCOUNTS,
   seedAcwdFixtures,
 } from "../helpers/acwd-fixtures.js";
+import { expectHttpError } from "../helpers/http-error.js";
 import { createTestPrisma } from "../helpers/prisma.js";
-
-function expectHttpError(
-  promise: Promise<unknown>,
-  statusCode: number,
-  message: string,
-) {
-  return expect(promise).rejects.toSatisfy((err: unknown) => {
-    return (
-      err instanceof HttpError &&
-      err.statusCode === statusCode &&
-      err.message === message
-    );
-  });
-}
 
 describe("AcwdLookupService (integration)", () => {
   const prisma = createTestPrisma();
@@ -96,6 +82,14 @@ describe("AcwdLookupService (integration)", () => {
       service.lookup(FIXTURE_ACCOUNTS.notBillable, "94536"),
       400,
       "Account not billable",
+    );
+  });
+
+  it("rejects inactive location", async () => {
+    await expectHttpError(
+      service.lookup(FIXTURE_ACCOUNTS.inactiveLocation, "94536"),
+      400,
+      "Account not eligible",
     );
   });
 });

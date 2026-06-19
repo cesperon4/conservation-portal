@@ -1,5 +1,5 @@
 import { Prisma } from "../../generated/prisma/client.js";
-import { NotFoundError } from "../../lib/errors.js";
+import { HttpError, NotFoundError } from "../../lib/errors.js";
 import type {
   CreateProgramBody,
   ListProgramsQuery,
@@ -10,6 +10,10 @@ import type {
   ProgramBudgetLogParams,
   CreateProgramBudgetLogBody,
   UpdateProgramBudgetLogBody,
+  CreateProgramStatusBody,
+  ListProgramStatusesQuery,
+  ProgramStatusParams,
+  UpdateProgramStatusBody,
 } from "./program.schema.js";
 import { ProgramRepository } from "./program.repository.js";
 import { UserService } from "../users/user.service.js";
@@ -185,6 +189,106 @@ export class ProgramService {
         err.code === "P2025"
       ) {
         throw new NotFoundError("Budget log not found");
+      }
+      throw err;
+    }
+  }
+
+  //program status
+  async createStatus(programId: string, input: CreateProgramStatusBody) {
+    await this.getById(programId);
+    const existing = await this.programs.findStatusBySortOrder(
+      programId,
+      input.sortOrder,
+    );
+    if (existing) {
+      throw new HttpError("Sort order already exists for this program", 409);
+    }
+
+    try {
+      return await this.programs.createStatus({
+        sortOrder: input.sortOrder,
+        adminStepNumber: input.adminStepNumber,
+        customerStepNumber: input.customerStepNumber,
+        name: input.name,
+        ...(input.customerName !== undefined && {
+          customerName: input.customerName,
+        }),
+        program: { connect: { id: programId } },
+        ...(input.description !== undefined && {
+          description: input.description,
+        }),
+        ...(input.milestone !== undefined && { milestone: input.milestone }),
+        ...(input.daysBeforeAlert !== undefined && {
+          daysBeforeAlert: input.daysBeforeAlert,
+        }),
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        throw new HttpError("Sort order already exists for this program", 409);
+      }
+      throw err;
+    }
+  }
+
+  async listStatuses(programId: string, filters: ListProgramStatusesQuery) {
+    await this.getById(programId);
+    return this.programs.findProgramStatusesManyActive(programId, filters);
+  }
+
+  async getStatusById({ id, statusId }: ProgramStatusParams) {
+    await this.getById(id);
+    const status = await this.programs.findActiveStatusById(id, statusId);
+    if (!status) throw new NotFoundError("Program status not found");
+    return status;
+  }
+
+  async updateStatus(
+    programId: string,
+    statusId: string,
+    input: UpdateProgramStatusBody,
+  ) {
+    await this.getStatusById({ id: programId, statusId });
+
+    try {
+      return await this.programs.updateStatus(statusId, {
+        ...(input.name !== undefined && { name: input.name }),
+        ...(input.customerName !== undefined && {
+          customerName: input.customerName,
+        }),
+        ...(input.description !== undefined && {
+          description: input.description,
+        }),
+        ...(input.milestone !== undefined && { milestone: input.milestone }),
+        ...(input.daysBeforeAlert !== undefined && {
+          daysBeforeAlert: input.daysBeforeAlert,
+        }),
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2025"
+      ) {
+        throw new NotFoundError("Program status not found");
+      }
+      throw err;
+    }
+  }
+
+  async softDeleteStatus(programId: string, statusId: string) {
+    await this.getStatusById({ id: programId, statusId });
+
+    try {
+      return await this.programs.softDeleteStatus(statusId);
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2025"
+      ) {
+        throw new NotFoundError("Program status not found");
       }
       throw err;
     }

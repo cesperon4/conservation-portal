@@ -3,6 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import type { Role } from "../src/generated/prisma/client.js";
 import { hashPassword } from "../src/lib/password.js";
+import { seedProgramStatuses } from "./seed-program-statuses.js";
 import { seedProperties } from "./seed-properties.js";
 
 /** Default password for all seeded users (development only). */
@@ -569,6 +570,8 @@ async function main() {
   console.log(
     `Programs seeded: ${activePrograms} active, ${deletedPrograms} soft-deleted.`,
   );
+
+  await seedProgramStatuses(prisma);
 
   const removedOrphanAdminProfiles = await prisma.adminProfile.deleteMany({
     where: {

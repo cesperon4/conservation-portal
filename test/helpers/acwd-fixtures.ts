@@ -9,6 +9,7 @@ export const FIXTURE_ACCOUNTS = {
   closed: "99999992",
   notBillable: "99999993",
   hyd: "99999994",
+  inactiveLocation: "99999996",
 } as const;
 
 const FIXTURE_LOCATION_NOS = [
@@ -16,6 +17,7 @@ const FIXTURE_LOCATION_NOS = [
   "9999999902",
   "9999999904",
   "9999999905",
+  "9999999906",
 ] as const;
 
 const FIXTURE_MOVEINOUT_IDS = [
@@ -24,6 +26,7 @@ const FIXTURE_MOVEINOUT_IDS = [
   "9999999903",
   "9999999904",
   "9999999905",
+  "9999999906",
 ] as const;
 
 const FIXTURE_ACCOUNT_NOS = Object.values(FIXTURE_ACCOUNTS);
@@ -210,6 +213,41 @@ export async function seedAcwdFixtures(prisma: PrismaClient) {
       id: "9999999904",
       accountNo: FIXTURE_ACCOUNTS.hyd,
       locationNo: "9999999904",
+      moveInDate: new Date("2020-01-01"),
+      moveOutDate: null,
+      status: "CUTON",
+      statusDate: new Date("2020-01-01"),
+      importedAt,
+    },
+  });
+
+  await prisma.acwdAccount.create({
+    data: {
+      accountNo: FIXTURE_ACCOUNTS.inactiveLocation,
+      accountStat: "BILBL",
+      accountClass: "RES",
+      personNo: "9999999906",
+      importedAt,
+    },
+  });
+  await prisma.acwdLocation.create({
+    data: {
+      locationNo: "9999999906",
+      locationStat: "INACT",
+      locationClass: "RES",
+      houseNo: "321",
+      streetName: "INACTIVE LN",
+      city: "FREMONT",
+      provinceCd: "CA",
+      postalCode: "94536",
+      importedAt,
+    },
+  });
+  await prisma.acwdMoveInOut.create({
+    data: {
+      id: "9999999906",
+      accountNo: FIXTURE_ACCOUNTS.inactiveLocation,
+      locationNo: "9999999906",
       moveInDate: new Date("2020-01-01"),
       moveOutDate: null,
       status: "CUTON",
